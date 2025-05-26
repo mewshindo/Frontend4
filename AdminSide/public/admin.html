@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление магазином</title>
+</head>
+
+<body>
+    <h3>Чат поддержки</h3>
+    <select id="customerList">
+        <option value="">Выберите клиента</option>
+    </select>
+    <div id="chat"></div>
+    <input type="text" id="messageInput" placeholder="Напишите сообщение...">
+    <button onclick="sendMessage()">Отправить</button>
+
+    <script>
+        const ws = new WebSocket(`ws://localhost:8081?type=admin`);
+        const customers = new Set();
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const chatDiv = document.getElementById('chat');
+
+            if (data.from && !customers.has(data.from)) {
+                customers.add(data.from);
+                const select = document.getElementById('customerList');
+                select.innerHTML += `<option value="${data.from}">${data.from}</option>`;
+            }
+
+            chatDiv.innerHTML += `<p><strong>${data.from}:</strong> ${data.message}</p>`;
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        };
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const customerId = document.getElementById('customerList').value;
+
+            if (customerId && input.value.trim()) {
+                ws.send(JSON.stringify({ to: customerId, message: input.value }));
+                document.getElementById('chat').innerHTML += `<p><strong>Вы:</strong> ${input.value}</p>`;
+                input.value = '';
+            } else {
+                alert('Сначала выберите клиента!');
+            }
+        }
+    </script>
+    <h2>Добавить товар</h2>
+    <form id="add-product-form">
+        <input type="text" id="new-name" placeholder="Название" required>
+        <input type="number" id="new-price" placeholder="Цена" required>
+        <input type="text" id="new-desc" placeholder="Описание" required>
+        <div id="category-container">
+            <select class="category-select" required>
+                <option value="Категория 1">Категория 1</option>
+                <option value="Категория 2">Категория 2</option>
+                <option value="Категория 3">Категория 3</option>
+            </select>
+        </div>
+        <button type="button" id="add-category-button">+</button>
+        <button type="button" id="remove-category-button">-</button>
+        <button type="submit">Add</button>
+    </form>
+
+    <h2>Список товаров</h2>
+    <div id="product-list"></div>
+
+    <script>
+        async function fetchProducts() {
+            const response = await fetch("http://localhost:8080/products");
+            const products = await response.json();
+            renderProducts(products);
+        }
+
+        function renderProducts(products) {
+            const container = document.getElementById("product-list");
+            container.innerHTML = "";
+
+            products.forEach(product => {
+                const item = document.createElement("div");
+                item.className = "product-card";
+                item.dataset.id = product.id;
+                item.innerHTML = `
+                    <h3>Название: ${product.name}</h3>
+                    <p class="price">Стоимость: $${product.price}</p>  
+                    <p>Описание: ${product.description}</p>
+                    <p><strong>Категории:</strong> ${product.categories.join(', ')}</p>
+                    <button onclick="editProduct(${product.id})">Изменить</button>
+                    <button onclick="deleteProduct(${product.id})">Удалить</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function editProduct(id) {
+            const item = document.querySelector(`[data-id="${id}"]`);
+            const name = item.querySelector("h3").textContent;
+            const price = item.querySelector(".price").textContent.replace(" руб.", "");
+            const description = item.querySelectorAll("p")[1].textContent;
+            const categories = item.querySelectorAll("p")[2].textContent.replace("Категории: ", "").split(', ');
+
+            item.innerHTML = `
+                <input type="text" id="name-${id}" value="${name}" placeholder="Введите название">
+                <input type="number" id="price-${id}" value="${price}" placeholder="Введите цену">
+                <input type="text" id="desc-${id}" value="${description}" placeholder="Введите описание">
+                <div id="category-container-${id}">
+                    ${categories.map(category => `
+                        <select class="category-select" required>
+                            <option value="Категория 1" ${category === 'Категория 1' ? 'selected' : ''}>Категория 1</option>
+                            <option value="Категория 2" ${category === 'Категория 2' ? 'selected' : ''}>Категория 2</option>
+                            <option value="Категория 3" ${category === 'Категория 3' ? 'selected' : ''}>Категория 3</option>
+                        </select>
+                    `).join('')}
+                </div>
+                <button type="button" onclick="addCategorySelect(${id})">+</button>
+                <button onclick="saveProduct(${id})">Save</button>
+                <button onclick="fetchProducts()">Cancel</button>
+            `;
+        }
+
+        function addCategorySelect(id) {
+            const categoryContainer = document.getElementById(`category-container-${id}`);
+            const newSelect = document.createElement("select");
+            newSelect.className = "category-select";
+            newSelect.innerHTML = `
+                <option value="Категория 1">Категория 1</option>
+                <option value="Категория 2">Категория 2</option>
+                <option value="Категория 3">Категория 3</option>
+            `;
+            categoryContainer.appendChild(newSelect);
+        }
+
+        async function saveProduct(id) {
+            const name = document.getElementById(`name-${id}`).value;
+            const price = document.getElementById(`price-${id}`).value;
+            const description = document.getElementById(`desc-${id}`).value;
+            const image = document.getElementById(`image-${id}`).value;
+            const categorySelects = document.querySelectorAll(`#category-container-${id} .category-select`);
+            const categories = Array.from(categorySelects).map(select => select.value);
+
+            await fetch(`http://localhost:8080/products/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, price, description, categories, image })
+            });
+
+            fetchProducts();
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm("u sure u wanna delete that??")) return;
+
+            await fetch(`http://localhost:8080/products/${id}`, {
+                method: "DELETE"
+            });
+
+            fetchProducts();
+        }
+
+        document.getElementById("add-category-button").addEventListener("click", () => {
+            const categoryContainer = document.getElementById("category-container");
+            const newSelect = document.createElement("select");
+            newSelect.className = "category-select";
+            newSelect.innerHTML = `
+                <option value="Категория 1">Категория 1</option>
+                <option value="Категория 2">Категория 2</option>
+                <option value="Категория 3">Категория 3</option>
+            `;
+            categoryContainer.appendChild(newSelect);
+        });
+
+        document.getElementById("remove-category-button").addEventListener("click", () => {
+            const categoryContainer = document.getElementById("category-container");
+            if (categoryContainer.children.length > 1) {
+                categoryContainer.removeChild(categoryContainer.lastChild);
+            }
+        });
+
+        document.getElementById("add-product-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const name = document.getElementById("new-name").value;
+            const price = document.getElementById("new-price").value;
+            const description = document.getElementById("new-desc").value;
+            const categorySelects = document.querySelectorAll(".category-select");
+            const categories = Array.from(categorySelects).map(select => select.value);
+
+            await fetch("http://localhost:8080/products", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify([{ name, price, description, categories }])
+            });
+
+            event.target.reset();
+            fetchProducts();
+        });
+
+        fetchProducts();
+    </script>
+</body>
+
+</html>

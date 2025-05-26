@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Магазин</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+
+<body>
+    <h1>Магазин</h1>
+
+    <label for="category-filter">Категории:</label>
+    <select id="category-filter">
+        <option value="all">Всё</option>
+        <option value="Blocks">Категория 1</option>
+        <option value="Tools">Категория 2</option>
+        <option value="Potions">Категория 3</option>
+    </select>
+
+    <div id="product-list"></div>
+
+    <script>
+        async function fetchProducts() {
+            const query = `
+                {
+                    products {
+                        id
+                        name
+                        price
+                        categories
+                    }
+                }
+            `;
+            try {
+                const response = await fetch("http://localhost:8080/graphql", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query })
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+                }
+                const result = await response.json();
+                console.log("Server response:", result); // Log the entire response
+                if (!result.data) {
+                    throw new Error("No data in response");
+                }
+                console.log("Fetched products:", result.data.products); // Debugging log
+                renderProducts(result.data.products);
+            } catch (error) {
+                console.error("Error fetching products:", error);
+            }
+        }
+
+        function renderProducts(products) {
+            const container = document.getElementById("product-list");
+            const categoryFilter = document.getElementById("category-filter").value;
+            container.innerHTML = "";
+
+            const filteredProducts = products.filter(product => categoryFilter === "all" || product.categories.includes(categoryFilter));
+            console.log("Filtered products:", filteredProducts); // Debugging log
+
+            filteredProducts.forEach(product => {
+                const item = document.createElement("div");
+                item.className = "product-card";
+                item.innerHTML = `
+                    <h3>${product.name}</h3>
+                    <p class="price">$${product.price}</p>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        document.getElementById("category-filter").addEventListener("change", fetchProducts);
+
+        fetchProducts();
+    </script>
+    <h3>Чат поддержки</h3>
+    <div id="chat"></div>
+    <input type="text" id="messageInput" placeholder="Напишите сообщение...">
+    <button onclick="sendMessage()">Отправить</button>
+
+    <script>
+        const customerId = 'customer123';
+        const ws = new WebSocket(`ws://localhost:8081?type=customer&id=${customerId}`);
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const chatDiv = document.getElementById('chat');
+            chatDiv.innerHTML += `<p><strong>${data.from}:</strong> ${data.message}</p>`;
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        };
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            if (input.value.trim()) {
+                ws.send(JSON.stringify({ to: 'admin', message: input.value }));
+                document.getElementById('chat').innerHTML += `<p><strong>Вы:</strong> ${input.value}</p>`;
+                input.value = '';
+            }
+        }
+    </script>
+</body>
+
+</html>
