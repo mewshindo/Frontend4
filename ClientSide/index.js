@@ -1,3 +1,4 @@
+// filepath: Frontend4/ClientSide/index.js
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -9,7 +10,7 @@ app.use(cors());
 app.use(express.static("public"));
 
 app.get("/products", (req, res) => {
-  fs.readFile("products.json", "utf8", (err, data) => {
+  fs.readFile("/app/Server/products.json", "utf8", (err, data) => {
     if (err) {
       res.status(500).json({ error: "Ошибка чтения файла" });
     } else {

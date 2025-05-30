@@ -1,3 +1,4 @@
+<!-- filepath: Frontend4/AdminSide/public/admin.html -->
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -136,14 +137,13 @@
             const name = document.getElementById(`name-${id}`).value;
             const price = document.getElementById(`price-${id}`).value;
             const description = document.getElementById(`desc-${id}`).value;
-            const image = document.getElementById(`image-${id}`).value;
             const categorySelects = document.querySelectorAll(`#category-container-${id} .category-select`);
             const categories = Array.from(categorySelects).map(select => select.value);
 
             await fetch(`http://localhost:8080/products/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, price, description, categories, image })
+                body: JSON.stringify({ name, price, description, categories })
             });
 
             fetchProducts();

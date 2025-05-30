@@ -7,7 +7,7 @@ const { schema, root } = require('./graphql/schema');
 
 const app = express();
 const PORT = 8080;
-const FILE = "../Server/products.json";
+const FILE = "/app/Server/products.json";
 
 app.use(cors());
 app.use(express.json());
@@ -69,7 +69,7 @@ app.delete("/products/:id", (req, res) => {
 app.use(express.static(path.join(__dirname, "public")));
 
 app.listen(PORT, () => {
-  console.log(`Панель администратора запущена на http://localhost:${PORT}`);
+  console.log(`Панель администратора запущена на http://localhost:${PORT}/admin.html`);
 });
 
 app.get("/", (req, res) => {

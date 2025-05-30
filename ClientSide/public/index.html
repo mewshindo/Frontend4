@@ -1,3 +1,4 @@
+<!-- filepath: Frontend4/ClientSide/public/index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -45,11 +46,11 @@
                     throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
                 }
                 const result = await response.json();
-                console.log("Server response:", result); // Log the entire response
+                console.log("Server response:", result);
                 if (!result.data) {
                     throw new Error("No data in response");
                 }
-                console.log("Fetched products:", result.data.products); // Debugging log
+                console.log("Fetched products:", result.data.products);
                 renderProducts(result.data.products);
             } catch (error) {
                 console.error("Error fetching products:", error);
@@ -62,7 +63,7 @@
             container.innerHTML = "";
 
             const filteredProducts = products.filter(product => categoryFilter === "all" || product.categories.includes(categoryFilter));
-            console.log("Filtered products:", filteredProducts); // Debugging log
+            console.log("Filtered products:", filteredProducts);
 
             filteredProducts.forEach(product => {
                 const item = document.createElement("div");

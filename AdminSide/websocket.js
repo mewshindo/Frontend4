@@ -1,3 +1,4 @@
+// filepath: c:\Users\mew\Documents\University\Frontend4\AdminSide\websocket.js
 const WebSocket = require('ws');
 
 const wss = new WebSocket.Server({ port: 8081 });
